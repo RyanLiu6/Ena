@@ -3,14 +3,11 @@ import re
 import csv
 import pdfplumber
 
-from collections import defaultdict
-
 from pprint import pprint
-
-from datetime import datetime
-
-from src.model import Category, Transaction
 from config import ROOT_PATH
+from datetime import datetime
+from collections import defaultdict
+from src.model import Category, Transaction
 
 
 class Ena:
@@ -31,7 +28,6 @@ class Ena:
             for statement in statements:
                 csv_data.extend(self._parse_statement(statement))
 
-            # We're sorting here so that CSV data
             csv_data.sort(key=lambda x: x.date)
             file_path = os.path.join(ROOT_PATH, "output", FI, f"{int(datetime.today().timestamp())}.csv")
             with open(file_path, "w+", newline="") as csv_file:
