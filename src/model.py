@@ -10,11 +10,23 @@ from typing import Dict, List, TypeVar
 class Orders(Enum):
     DEFAULT = "DEFAULT"
     DIME = "DIME"
+    SIMPLE = "SIMPLE"
+
 
 CSV_ORDERS = {
     Orders.DEFAULT: ["Date", "Amount", "Note", "Category"],
     Orders.DIME: ["Category", "Note", "Date", "Amount"],
+    Orders.SIMPLE: ["Date", "Amount", "Note"],
 }
+
+
+# User config
+@dataclass
+class Config:
+    csv_order: Orders
+    use_ollama: bool
+    keep_payments: bool
+    negative_expenses: bool
 
 
 class Category(Enum):
@@ -27,7 +39,7 @@ class Category(Enum):
     GAMES = "Games"
     TRAVEL = "Travel"
     GIFTS = "Gifts"
-    REFUNDS = "Refunds"
+    INCOME = "Income"
     MISC = "Misc"
     NONE = "N/A"
 
@@ -42,20 +54,6 @@ class Transaction:
     def __eq__(self, other):
         return isinstance(other, Transaction) and self.date == other.date and self.amount == other.amount \
             and self.note == other.note and self.category == other.category
-
-    def row_repr(self) -> Dict:
-        """
-        Returns the Row Representation of a Transaction, meant to be used with csv.DictWriter.
-
-        Returns:
-            Dict: Dictionary representation of this Transaction
-        """
-        return {
-            "Date": self.date,
-            "Amount": self.amount,
-            "Note": self.note,
-            "Category": self.category.value,
-        }
 
 
 class BaseFI:
@@ -209,8 +207,6 @@ class BNS(BaseFI):
         }
 
         super().__init__(name="BNS", regex=regex)
-
-
 
 
 class FIFactory:

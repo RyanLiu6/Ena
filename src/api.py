@@ -4,26 +4,28 @@ import csv
 import logging
 import pdfplumber
 
-from config import ROOT_PATH
+from Config import ROOT_PATH, get_preferences
 
 from typing import List
 from datetime import datetime
+from dataclasses import asdict
 from collections import defaultdict
 from src.model import Category, Transaction, FIFactory, CSV_ORDERS
 
 
 class Ena:
-    def __init__(self, order: str, statements_dir: str):
+    def __init__(self, statements_dir: str):
         """
-        Iterates statements_dir to create dictionary where:
-        Key = Financial Institute Name
-        Value = List of Statements (absolute path)
+        Does two things:
+        1. Globs available statements and maps FI Name to corresponding statements'
+            absolute path
+
+        2. Reads stored preferences
 
         Args:
-            order (str): CSV Order
             statements_dir (str): Directory where statements are stored.
         """
-        self.csv_order = CSV_ORDERS[order]
+        self.preferences = get_preferences()
         self.statements = defaultdict(list)
         for item in os.listdir(statements_dir):
             local_path = os.path.join(statements_dir, item)
@@ -47,15 +49,32 @@ class Ena:
             csv_data.sort(key=lambda x: x.date)
             file_path = os.path.join(ROOT_PATH, "output", fi_name, f"{int(datetime.today().timestamp())}.csv")
             with open(file_path, "w+", newline="") as csv_file:
-                writer = csv.DictWriter(csv_file, self.csv_order)
+                writer = csv.DictWriter(csv_file, CSV_ORDERS[self.preferences.csv_order])
                 writer.writeheader()
                 for txn in csv_data:
-                    writer.writerow(txn.row_repr())
+                    writer.writerow(asdict(txn))
 
     def _parse_statement(self, processor: FIFactory.type_FI, statement_path: str) -> List[Transaction]:
         """
         Code is directly from Bizzaro:Teller/teller/pdf_processor.py, but modified to fit
         Ena's models and needs.
+
+        Specifically:
+        1. Category is added via Ollama based on available categories and confidence %.
+            a. This behaviour can be disabled.
+
+        2. Payments to Credit Cards (Ena's main use-case) will be removed from the list of
+            Transactions. Per my personal use-case, payments will always be equal to opening
+            balance.
+            a. This behaviour can be disabled.
+
+        3. Transactions will all have "positive" value, ie, > 0, as Ena is designed to be an
+            expense tracker for Credit Cards. In the rare case that a transaction is "negative",
+            for income of some sort (Cashback rewards, refunds, etc), it'll be categorized under
+            Category.INCOME with a negative value.
+            a. This behaviour can be inverted so that Expenses are negative and Incomes are positive.
+
+        All the above configuration and more are outlined in README.md and configured via config.py.
 
         Args:
             processor (FIFactory.type_FI): Financial Insitute's class (from src/model.py). Must be an
