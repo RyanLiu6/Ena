@@ -9,11 +9,19 @@ from config import ROOT_PATH
 from typing import List
 from datetime import datetime
 from collections import defaultdict
-from src.model import FI, Category, Transaction, FI_TO_CLASS
+from src.model import Category, Transaction, FIFactory
 
 
 class Ena:
     def __init__(self, statements_dir: str):
+        """
+        Iterates statements_dir to create dictionary where:
+        Key = Financial Institute Name
+        Value = List of Statements (absolute path)
+
+        Args:
+            statements_dir (str): Directory where statements are stored.
+        """
         self.statements = defaultdict(list)
         for item in os.listdir(statements_dir):
             local_path = os.path.join(statements_dir, item)
@@ -24,18 +32,13 @@ class Ena:
                         file_path = os.path.join(local_path, file_name)
                         self.statements[item].append(file_path)
 
-    def _get_processor(self, fi_name: str) -> FI:
-        try:
-            processor = FI_TO_CLASS[fi_name]()
-        except KeyError:
-            logging.ERROR(f"{fi} is not yet supported - please open an issue or add it manually!")
-            raise
-        return processor
-
     def parse_statements(self):
+        """
+        Parses all statements found, ordered by individual Financial Institutes.
+        """
         for fi_name, statements in self.statements.items():
             csv_data = []
-            processor = self._get_processor(fi_name=fi_name)
+            processor = FIFactory.get_processor(fi_name=fi_name)
             for statement in statements:
                 csv_data.extend(self._parse_statement(processor, statement))
 
@@ -47,19 +50,21 @@ class Ena:
                 for txn in csv_data:
                     writer.writerow(txn.row_repr())
 
-    def _parse_statement(self, processor: FI, pdf_path: str) -> List[Transaction]:
+    def _parse_statement(self, processor: FIFactory.type_FI, statement_path: str) -> List[Transaction]:
         """
-        Code is directly from Bizzaro:Teller/teller/pdf_processor.py
+        Code is directly from Bizzaro:Teller/teller/pdf_processor.py, but modified to fit
+        Ena's models and needs.
 
         Args:
-            processor (FI): _description_
-            pdf_path (str): _description_
+            processor (FIFactory.type_FI): Financial Insitute's class (from src/model.py). Must be an
+                instance of Base_FI.
+            statement_path (str): Absolute path to statement being processed.
 
         Returns:
-            List[Transaction]: _description_
+            List[Transaction]: List of transactions
         """
         transactions = []
-        with pdfplumber.open(pdf_path) as pdf:
+        with pdfplumber.open(statement_path) as pdf:
             logging.info("=================================================")
 
             text = ""
