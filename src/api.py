@@ -9,19 +9,21 @@ from config import ROOT_PATH
 from typing import List
 from datetime import datetime
 from collections import defaultdict
-from src.model import Category, Transaction, FIFactory
+from src.model import Category, Transaction, FIFactory, CSV_ORDERS
 
 
 class Ena:
-    def __init__(self, statements_dir: str):
+    def __init__(self, order: str, statements_dir: str):
         """
         Iterates statements_dir to create dictionary where:
         Key = Financial Institute Name
         Value = List of Statements (absolute path)
 
         Args:
+            order (str): CSV Order
             statements_dir (str): Directory where statements are stored.
         """
+        self.csv_order = CSV_ORDERS[order]
         self.statements = defaultdict(list)
         for item in os.listdir(statements_dir):
             local_path = os.path.join(statements_dir, item)
@@ -45,7 +47,7 @@ class Ena:
             csv_data.sort(key=lambda x: x.date)
             file_path = os.path.join(ROOT_PATH, "output", fi_name, f"{int(datetime.today().timestamp())}.csv")
             with open(file_path, "w+", newline="") as csv_file:
-                writer = csv.DictWriter(csv_file, ["Date", "Amount", "Note", "Category"])
+                writer = csv.DictWriter(csv_file, self.csv_order)
                 writer.writeheader()
                 for txn in csv_data:
                     writer.writerow(txn.row_repr())
@@ -113,7 +115,7 @@ class Ena:
 
                 transaction = Transaction(date=str(date.date().isoformat()),
                                           amount=amount,
-                                          note=match_dict["description"])
+                                          note=match_dict["description"].strip())
 
                 if transaction in transactions:
                     # Assumes all duplicate transactions are valid

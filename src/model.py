@@ -6,11 +6,28 @@ from dataclasses import dataclass
 from typing import Dict, List, TypeVar
 
 
+# Two orders are specified here, whichever is used can be configured via CLI.
+class Orders(Enum):
+    DEFAULT = "DEFAULT"
+    DIME = "DIME"
+
+CSV_ORDERS = {
+    Orders.DEFAULT: ["Date", "Amount", "Note", "Category"],
+    Orders.DIME: ["Category", "Note", "Date", "Amount"],
+}
+
+
 class Category(Enum):
     RECURRING = "Recurring"
     GROCERIES = "Groceries"
-    DINING = "Dining"
-    ENTERTAINMENT = "Entertainment"
+    HOUSEHOLD = "Household"
+    FOOD = "Food"
+    FUN = "Fun"
+    FASHION = "Fashion"
+    GAMES = "Games"
+    TRAVEL = "Travel"
+    GIFTS = "Gifts"
+    REFUNDS = "Refunds"
     MISC = "Misc"
     NONE = "N/A"
 
