@@ -11,7 +11,6 @@ from datetime import datetime
 from collections import defaultdict
 from src.model import FI, Category, Transaction, FI_TO_CLASS
 
-from pprint import pprint
 
 class Ena:
     def __init__(self, statements_dir: str):
@@ -62,13 +61,10 @@ class Ena:
         transactions = []
         with pdfplumber.open(pdf_path) as pdf:
             logging.info("=================================================")
-            pprint(pdf_path)
 
             text = ""
             for page in pdf.pages:
-                text += page.extract_text()
-
-            pprint(text)
+                text += page.extract_text(x_tolerance=1)
 
             year = processor.get_start_year(text)
             opening_balance = processor.get_opening_balance(text)
@@ -105,7 +101,7 @@ class Ena:
 
                 # checks description regex
                 if ("$" in match_dict["description"]):
-                    logging.info(match_dict["description"])
+                    logging.info(f"$ found in description: {match_dict['description']}")
                     newAmount = re.search(r"(?P<amount>-?\$[\d,]+\.\d{2}-?)(?P<cr>(\-|\s?CR))?", match_dict["description"])
                     amount = -float(newAmount["amount"].replace("$", "").replace(",", ""))
                     match_dict["description"] = match_dict["description"].split("$", 1)[0]
@@ -119,7 +115,6 @@ class Ena:
                     transaction.description = transaction.description + " 2"
                 else:
                     transactions.append(transaction)
-
 
         processor.validate(opening_balance, closing_balance, transactions)
         return transactions

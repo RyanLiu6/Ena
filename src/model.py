@@ -22,12 +22,16 @@ class Transaction:
     note: str
     category: Category = Category.NONE
 
+    def __eq__(self, other):
+        return isinstance(other, Transaction) and self.date == other.date and self.amount == other.amount \
+            and self.note == other.note and self.category == other.category
+
     def row_repr(self):
         return {
             "Date": self.date,
             "Amount": self.amount,
             "Note": self.note,
-            "Category": self.category,
+            "Category": self.category.value,
         }
 
 
