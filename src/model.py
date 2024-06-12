@@ -39,9 +39,11 @@ class Category(Enum):
     GAMES = "Games"
     TRAVEL = "Travel"
     GIFTS = "Gifts"
+    # Used to differentiate payments / refunds
+    # / cashback rewards from expenses
     INCOME = "Income"
-    MISC = "Misc"
-    NONE = "N/A"
+    # Serves as generic expense
+    EXPENSE = "Expense"
 
 
 @dataclass
@@ -49,13 +51,33 @@ class Transaction:
     date: str
     amount: float
     note: str
-    category: Category = Category.NONE
+    category: Category = Category.EXPENSE
 
     def __eq__(self, other):
         return isinstance(other, Transaction) and self.date == other.date and self.amount == other.amount \
             and self.note == other.note and self.category == other.category
 
+    def row_repr(self) -> Dict:
+        """
+        Returns the Row Representation of a Transaction.
+
+        Returns:
+            Dict: Dictionary representation of this Transaction
+        """
+        return {
+            "date": self.date,
+            "amount": self.amount,
+            "note": self.note,
+            "category": self.category.value,
+        }
+
     def simple_repr(self) -> Dict:
+        """
+        Returns the Row Representation of a Transaction, simplified (without category).
+
+        Returns:
+            Dict: Dictionary representation of this Transaction
+        """
         return {
             "date": self.date,
             "amount": self.amount,
@@ -148,7 +170,7 @@ class BaseFI(ABC):
         logging.info(f"Closing Balance: {balance}")
         return balance
 
-    def validate(self, opening_balance: int, closing_balance: int, transactions: List[Transaction]):
+    def validate(self, opening_balance: int, closing_balance: int, transactions: List[Transaction], positive_expenses: bool):
         """
         Validates list of processed transactions against opening and closing balances.
 
@@ -156,6 +178,8 @@ class BaseFI(ABC):
             opening_balance (int): Opening balance for a given statement
             closing_balance (int): Closing balance for a given statement
             transactions (List[Transaction]): List of transactions for a given statement
+            positive_expenses (bool): True if expenses are represented as positive floats,
+                False if they are represented as negative floats instead.
 
         Raises:
             AssertionError: An exception is raised when not all transactions are accounted for due to
@@ -171,14 +195,18 @@ class BaseFI(ABC):
         net = round(sum([r.amount for r in transactions]), 2)
         outflow = round(sum([r.amount for r in transactions if r.amount < 0]), 2)
         inflow = round(sum([r.amount for r in transactions if r.amount > 0]), 2)
-        if round(opening_balance - closing_balance, 2) != net:
-            logging.info(f"Difference is {opening_balance - closing_balance} vs {net}")
-            logging.info(f"Opening Balance: {opening_balance}")
-            logging.info(f"Closing Balance: {closing_balance}")
-            logging.info(f"Transactions (net/infow/outflow): {net} / {inflow} / {outflow}")
-            logging.info("Parsed transactions:")
+        difference = round(opening_balance - closing_balance, 2)
+        if positive_expenses:
+            difference *= -1
+
+        if difference != net:
+            logging.warn(f"Difference is {difference} vs {net}")
+            logging.warn(f"Opening Balance: {opening_balance}")
+            logging.warn(f"Closing Balance: {closing_balance}")
+            logging.warn(f"Transactions (net/infow/outflow): {net} / {inflow} / {outflow}")
+            logging.warn("Parsed transactions:")
             for item in sorted(transactions, key=lambda item: item.date):
-                logging.info(item)
+                logging.warn(item)
             raise AssertionError("Discrepancy found, bad parse :(. Not all transcations are accounted for, validate your transaction regex.")
 
 
@@ -187,10 +215,10 @@ class RBC(BaseFI):
         regex = {
             "transaction": (r"^(?P<dates>(?:\w{3} \d{2} ){2})"
                 r"(?P<description>.+)\s"
-                r"(?P<amount>-?\$[\d,]+\.\d{2}-?)"),
+                r"(?P<amount>-?\$[\d,]+\.\d{2}-?)(?P<cr>(\-|\s?CR))?"),
             "start_year": r"STATEMENT FROM .+(?P<year>-?\,.[0-9][0-9][0-9][0-9])",
-            "open_balance": r"(PREVIOUS|Previous) (STATEMENT|ACCOUNT|Account) (BALANCE|Balance) (?P<balance>-?\$[\d,]+\.\d{2})",
-            "closing_balance": r"(?:NEW|CREDIT) BALANCE (?P<balance>-?\$[\d,]+\.\d{2})"
+            "open_balance": r"(PREVIOUS|Previous) (STATEMENT|ACCOUNT|Account) (BALANCE|Balance) (?P<balance>-?\$[\d,]+\.\d{2})(?P<cr>(\-|\s?CR))?",
+            "closing_balance": r"(?:NEW|CREDIT) BALANCE (?P<balance>-?\$[\d,]+\.\d{2})(?P<cr>(\-|\s?CR))?"
         }
 
         super().__init__(name="RBC", regex=regex)
@@ -258,10 +286,10 @@ class BNS(BaseFI):
         regex = {
             "transaction": (r"^(?P<dates>(?:\w{3} \d{2} ){2})"
                 r"(?P<description>.+)\s"
-                r"(?P<amount>-?\$[\d,]+\.\d{2}-?)"),
+                r"(?P<amount>-?\$[\d,]+\.\d{2}-?)(?P<cr>(\-|\s?CR))?"),
             "start_year": r"STATEMENT FROM .+(?P<year>-?\,.[0-9][0-9][0-9][0-9])",
-            "open_balance": r"(PREVIOUS|Previous) (STATEMENT|ACCOUNT|Account) (BALANCE|Balance) (?P<balance>-?\$[\d,]+\.\d{2})",
-            "closing_balance": r"(?:NEW|CREDIT) BALANCE (?P<balance>-?\$[\d,]+\.\d{2})"
+            "open_balance": r"(PREVIOUS|Previous) (STATEMENT|ACCOUNT|Account) (BALANCE|Balance) (?P<balance>-?\$[\d,]+\.\d{2})(?P<cr>(\-|\s?CR))?",
+            "closing_balance": r"(?:NEW|CREDIT) BALANCE (?P<balance>-?\$[\d,]+\.\d{2})(?P<cr>(\-|\s?CR))?"
         }
 
         super().__init__(name="BNS", regex=regex)
@@ -282,7 +310,6 @@ class BNS(BaseFI):
                 considered expense
         """
         ...
-
 
 
 class FIFactory:

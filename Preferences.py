@@ -38,7 +38,7 @@ def get_preferences() -> Dict:
               help="CSV Order. Defaults to the simple order, which is Date, Amount, and Note (Description)")
 @click.option("-u", "--use-ollama", is_flag=True, default=False,
               help="Use Ollama and local LLM to categorize expenses. NOTE: Experimental Feature. Defaults to False.")
-@click.option("-n", "--positive_expenses", is_flag=True, default=False,
+@click.option("-p", "--positive_expenses", is_flag=True, default=False,
               help="Have expenses represented as positive floats and incomes represented as negative floats. Defaults to False.")
 def cli(order: Orders, use_ollama: bool, positive_expenses: bool):
     """

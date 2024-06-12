@@ -8,7 +8,6 @@ from Preferences import ROOT_PATH, get_preferences
 
 from typing import List
 from datetime import datetime
-from dataclasses import asdict
 from collections import defaultdict
 from src.model import Category, Orders, Transaction, FIFactory, CSV_ORDERS
 
@@ -56,7 +55,7 @@ class Ena:
                     if csv_order == Orders.SIMPLE:
                         writer.writerow(txn.simple_repr())
                     else:
-                        writer.writerow(asdict(txn))
+                        writer.writerow(txn.row_repr())
 
     def _parse_statement(self, processor: FIFactory.type_FI, statement_path: str) -> List[Transaction]:
         """
@@ -122,12 +121,16 @@ class Ena:
                 if month == "01" and year_end:
                     date = date.replace(year=date.year + 1)
 
-                amount = -float(match_dict["amount"].replace("$", "").replace(",", ""))
+                if (match_dict["cr"]):
+                    logging.info(f"Credit balance found in transaction: {match_dict['amount']}")
+                    amount = -float("-" + match_dict["amount"].replace("$", "").replace(",", ""))
+                else:
+                    amount = -float(match_dict["amount"].replace("$", "").replace(",", ""))
 
                 # checks description regex
                 if ("$" in match_dict["description"]):
                     logging.info(f"$ found in description: {match_dict['description']}")
-                    newAmount = re.search(r"(?P<amount>-?\$[\d,]+\.\d{2}-?)", match_dict["description"])
+                    newAmount = re.search(r"(?P<amount>-?\$[\d,]+\.\d{2}-?)(?P<cr>(\-|\s?CR))?", match_dict["description"])
                     amount = -float(newAmount["amount"].replace("$", "").replace(",", ""))
                     match_dict["description"] = match_dict["description"].split("$", 1)[0]
 
@@ -146,6 +149,8 @@ class Ena:
                     if self.preferences.use_ollama:
                         # Get category via inference
                         ...
+                    else:
+                        transaction.category = Category.EXPENSE
 
                 """
                 Transactions is represented as a List instead of Set because duplicate transactions
@@ -155,5 +160,5 @@ class Ena:
                 """
                 transactions.append(transaction)
 
-        processor.validate(opening_balance, closing_balance, transactions)
+        processor.validate(opening_balance, closing_balance, transactions, self.preferences.positive_expenses)
         return transactions
