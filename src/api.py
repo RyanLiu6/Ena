@@ -4,7 +4,7 @@ import csv
 import logging
 import pdfplumber
 
-from Config import ROOT_PATH, get_preferences
+from Preferences import ROOT_PATH, get_preferences
 
 from typing import List
 from datetime import datetime

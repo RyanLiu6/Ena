@@ -5,7 +5,7 @@ import click
 import logging
 
 from src.api import Ena
-from Config import ROOT_PATH
+from Preferences import ROOT_PATH
 
 STATEMENTS_PATH = os.path.join(ROOT_PATH, "statements")
 
