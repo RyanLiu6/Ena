@@ -5,11 +5,10 @@ import click
 import logging
 
 from src.api import Ena
-from Config import STATEMENTS_PATH
+from Config import ROOT_PATH
 
-
-ROOT_PATH = os.path.dirname(os.path.abspath(__name__))
 STATEMENTS_PATH = os.path.join(ROOT_PATH, "statements")
+
 
 @click.command()
 @click.option("-d", "--directory", "statements_dir", type=click.Path(exists=True),

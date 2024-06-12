@@ -3,6 +3,7 @@ import logging
 
 from enum import Enum
 from dataclasses import dataclass
+from abc import ABC, abstractmethod
 from typing import Dict, List, TypeVar
 
 
@@ -14,19 +15,18 @@ class Orders(Enum):
 
 
 CSV_ORDERS = {
-    Orders.DEFAULT: ["Date", "Amount", "Note", "Category"],
-    Orders.DIME: ["Category", "Note", "Date", "Amount"],
-    Orders.SIMPLE: ["Date", "Amount", "Note"],
+    Orders.DEFAULT: ["date", "amount", "note", "category"],
+    Orders.DIME: ["category", "note", "date", "amount"],
+    Orders.SIMPLE: ["date", "amount", "note"],
 }
 
 
 # User config
 @dataclass
-class Config:
+class Preferences:
     csv_order: Orders
     use_ollama: bool
-    keep_payments: bool
-    negative_expenses: bool
+    positive_expenses: bool
 
 
 class Category(Enum):
@@ -55,8 +55,15 @@ class Transaction:
         return isinstance(other, Transaction) and self.date == other.date and self.amount == other.amount \
             and self.note == other.note and self.category == other.category
 
+    def simple_repr(self) -> Dict:
+        return {
+            "date": self.date,
+            "amount": self.amount,
+            "note": self.note,
+        }
 
-class BaseFI:
+
+class BaseFI(ABC):
     """
     Code for Regex Expressions and validate are directly from Bizzaro:Teller
     """
@@ -72,6 +79,14 @@ class BaseFI:
             str: Transaction regex.
         """
         return self.regex["transaction"]
+
+    @abstractmethod
+    def is_transaction_income(self, transaction: Transaction) -> bool:
+        """
+        Must be implemented by individual FI Classes due to statements being different
+        between different FIs.
+        """
+        pass
 
     def get_start_year(self, statement: str) -> int:
         """
@@ -172,17 +187,41 @@ class RBC(BaseFI):
         regex = {
             "transaction": (r"^(?P<dates>(?:\w{3} \d{2} ){2})"
                 r"(?P<description>.+)\s"
-                r"(?P<amount>-?\$[\d,]+\.\d{2}-?)(?P<cr>(\-|\s?CR))?"),
+                r"(?P<amount>-?\$[\d,]+\.\d{2}-?)"),
             "start_year": r"STATEMENT FROM .+(?P<year>-?\,.[0-9][0-9][0-9][0-9])",
-            "open_balance": r"(PREVIOUS|Previous) (STATEMENT|ACCOUNT|Account) (BALANCE|Balance) (?P<balance>-?\$[\d,]+\.\d{2})(?P<cr>(\-|\s?CR))?",
-            "closing_balance": r"(?:NEW|CREDIT) BALANCE (?P<balance>-?\$[\d,]+\.\d{2})(?P<cr>(\-|\s?CR))?"
+            "open_balance": r"(PREVIOUS|Previous) (STATEMENT|ACCOUNT|Account) (BALANCE|Balance) (?P<balance>-?\$[\d,]+\.\d{2})",
+            "closing_balance": r"(?:NEW|CREDIT) BALANCE (?P<balance>-?\$[\d,]+\.\d{2})"
         }
 
         super().__init__(name="RBC", regex=regex)
 
+    def is_transaction_income(self, transaction: Transaction, positive_expenses: bool) -> bool:
+        """
+        Checks if a given transaction is considered an income transaction. This
+        is explicitly any transactions that show up on the CC bill that are:
+        1. Cash Back Rewards
+        2. Payment towards the bill
+        3. Refunds / Chargebacks
+
+        Args:
+            transaction (Transaction): Transaction to be checked
+            positive_expenses (bool): True if expenses are represented as positive floats,
+                False if they are represented as negative floats instead.
+
+        Returns:
+            bool: True if given transaction is considered income, False if its
+                considered expense
+        """
+        # If positive_expenses is True, then expenses are > 0 and income < 0
+        amount = transaction.amount if positive_expenses else transaction.amount * -1
+        return amount < 0
+
 
 class TD(BaseFI):
     def __init__(self):
+        """
+        NOTE: Currently unimplemented as I do not have access to a TD CC Statement.
+        """
         regex = {
             "transaction": (r"(?P<dates>(?:\w{3} \d{1,2} ){2})"
                 r"(?P<description>.+)\s"
@@ -194,19 +233,56 @@ class TD(BaseFI):
 
         super().__init__(name="TD", regex=regex)
 
+    def is_transaction_income(self, transaction: Transaction) -> bool:
+        """
+        Checks if a given transaction is considered an income transaction. This
+        is explicitly any transactions that show up on the CC bill that are:
+        1. Cash Back Rewards
+        2. Payment towards the bill
+        3. Refunds / Chargebacks
+
+        NOTE: Currently unimplemented as I do not have access to a TD CC Statement.
+
+        Args:
+            transaction (Transaction): Transaction to be checked
+
+        Returns:
+            bool: True if given transaction is considered income, False if its
+                considered expense
+        """
+        ...
+
 
 class BNS(BaseFI):
     def __init__(self):
         regex = {
             "transaction": (r"^(?P<dates>(?:\w{3} \d{2} ){2})"
                 r"(?P<description>.+)\s"
-                r"(?P<amount>-?\$[\d,]+\.\d{2}-?)(?P<cr>(\-|\s?CR))?"),
+                r"(?P<amount>-?\$[\d,]+\.\d{2}-?)"),
             "start_year": r"STATEMENT FROM .+(?P<year>-?\,.[0-9][0-9][0-9][0-9])",
-            "open_balance": r"(PREVIOUS|Previous) (STATEMENT|ACCOUNT|Account) (BALANCE|Balance) (?P<balance>-?\$[\d,]+\.\d{2})(?P<cr>(\-|\s?CR))?",
-            "closing_balance": r"(?:NEW|CREDIT) BALANCE (?P<balance>-?\$[\d,]+\.\d{2})(?P<cr>(\-|\s?CR))?"
+            "open_balance": r"(PREVIOUS|Previous) (STATEMENT|ACCOUNT|Account) (BALANCE|Balance) (?P<balance>-?\$[\d,]+\.\d{2})",
+            "closing_balance": r"(?:NEW|CREDIT) BALANCE (?P<balance>-?\$[\d,]+\.\d{2})"
         }
 
         super().__init__(name="BNS", regex=regex)
+
+    def is_transaction_income(self, transaction: Transaction) -> bool:
+        """
+        Checks if a given transaction is considered an income transaction. This
+        is explicitly any transactions that show up on the CC bill that are:
+        1. Cash Back Rewards
+        2. Payment towards the bill
+        3. Refunds / Chargebacks
+
+        Args:
+            transaction (Transaction): Transaction to be checked
+
+        Returns:
+            bool: True if given transaction is considered income, False if its
+                considered expense
+        """
+        ...
+
 
 
 class FIFactory:

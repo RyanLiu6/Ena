@@ -10,7 +10,7 @@ from typing import List
 from datetime import datetime
 from dataclasses import asdict
 from collections import defaultdict
-from src.model import Category, Transaction, FIFactory, CSV_ORDERS
+from src.model import Category, Orders, Transaction, FIFactory, CSV_ORDERS
 
 
 class Ena:
@@ -49,10 +49,14 @@ class Ena:
             csv_data.sort(key=lambda x: x.date)
             file_path = os.path.join(ROOT_PATH, "output", fi_name, f"{int(datetime.today().timestamp())}.csv")
             with open(file_path, "w+", newline="") as csv_file:
-                writer = csv.DictWriter(csv_file, CSV_ORDERS[self.preferences.csv_order])
+                csv_order = CSV_ORDERS[self.preferences.csv_order]
+                writer = csv.DictWriter(csv_file, csv_order)
                 writer.writeheader()
                 for txn in csv_data:
-                    writer.writerow(asdict(txn))
+                    if csv_order == Orders.SIMPLE:
+                        writer.writerow(txn.simple_repr())
+                    else:
+                        writer.writerow(asdict(txn))
 
     def _parse_statement(self, processor: FIFactory.type_FI, statement_path: str) -> List[Transaction]:
         """
@@ -63,12 +67,7 @@ class Ena:
         1. Category is added via Ollama based on available categories and confidence %.
             a. This behaviour can be disabled.
 
-        2. Payments to Credit Cards (Ena's main use-case) will be removed from the list of
-            Transactions. Per my personal use-case, payments will always be equal to opening
-            balance.
-            a. This behaviour can be disabled.
-
-        3. Transactions will all have "positive" value, ie, > 0, as Ena is designed to be an
+        2. Transactions will all have "positive" value, ie, > 0, as Ena is designed to be an
             expense tracker for Credit Cards. In the rare case that a transaction is "negative",
             for income of some sort (Cashback rewards, refunds, etc), it'll be categorized under
             Category.INCOME with a negative value.
@@ -96,11 +95,15 @@ class Ena:
             opening_balance = processor.get_opening_balance(text)
             closing_balance = processor.get_closing_balance(text)
 
+            print(text)
+
             # debugging transaction mapping - all 3 regex in transaction have to find a result in order for it to be considered a "match"
             year_end = False
             transaction_regex = processor.get_transaction_regex()
             for match in re.finditer(transaction_regex, text, re.MULTILINE):
                 match_dict = match.groupdict()
+                print(match_dict)
+
                 date = match_dict["dates"].replace("/", " ") # change format to standard: 03/13 -> 03 13
                 date = date.split(" ")[0:2]  # Aug. 10 Aug. 13 -> ["Aug.", "10"]
                 date[0] = date[0].strip(".") # Aug. -> Aug
@@ -119,28 +122,38 @@ class Ena:
                 if month == "01" and year_end:
                     date = date.replace(year=date.year + 1)
 
-                if (match_dict["cr"]):
-                    logging.info(f"Credit balance found in transaction: {match_dict['amount']}")
-                    amount = -float("-" + match_dict["amount"].replace("$", "").replace(",", ""))
-                else:
-                    amount = -float(match_dict["amount"].replace("$", "").replace(",", ""))
+                amount = -float(match_dict["amount"].replace("$", "").replace(",", ""))
 
                 # checks description regex
                 if ("$" in match_dict["description"]):
                     logging.info(f"$ found in description: {match_dict['description']}")
-                    newAmount = re.search(r"(?P<amount>-?\$[\d,]+\.\d{2}-?)(?P<cr>(\-|\s?CR))?", match_dict["description"])
+                    newAmount = re.search(r"(?P<amount>-?\$[\d,]+\.\d{2}-?)", match_dict["description"])
                     amount = -float(newAmount["amount"].replace("$", "").replace(",", ""))
                     match_dict["description"] = match_dict["description"].split("$", 1)[0]
+
+                # Set amount based on preferences
+                if self.preferences.positive_expenses:
+                    amount *= -1
 
                 transaction = Transaction(date=str(date.date().isoformat()),
                                           amount=amount,
                                           note=match_dict["description"].strip())
 
-                if transaction in transactions:
-                    # Assumes all duplicate transactions are valid
-                    transaction.description = transaction.description + " 2"
+                # Check if transaction should be directly categorized as income transaction
+                if processor.is_transaction_income(transaction, self.preferences.positive_expenses):
+                    transaction.category = Category.INCOME
                 else:
-                    transactions.append(transaction)
+                    if self.preferences.use_ollama:
+                        # Get category via inference
+                        ...
+
+                """
+                Transactions is represented as a List instead of Set because duplicate transactions
+                where properties are the same (Transaction.__eq__) are valid.
+
+                It's entirely possible that you make the same purchase at the same spot regularly.
+                """
+                transactions.append(transaction)
 
         processor.validate(opening_balance, closing_balance, transactions)
         return transactions
