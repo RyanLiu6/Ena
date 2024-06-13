@@ -21,6 +21,12 @@ The core feature of Ena is to take Credit Card bill statements from major Financ
 
 The second core feature is Ena's ability to query a local custom LLM to categorize transactions into pre-set categories (defined in `src/model:Category`) so users have a better idea of what they're spending on. Currently, the local LLM model is based off Meta's Llama3, and its model is defined at `src/llm/Modelfile`. It has been instructed to only categorize a transaction if its at least 90% confident (0.9). While not perfect, it serves as a nice starting point for most users.
 
+> [!NOTE]
+> Due to how local LLMs work via Ollama, the first time this script is ran, it will take significantly longer (60+ seconds on my 7800XT).
+> This is primarily because Ollama has to load the model into memory before any requests can be made towards the model. By default, the model
+> stays in memory for 5 minutes. If possible, load the model beforehand, although that just kicks the problem to a different stage. Wait times
+> can vary depending on your machine.
+
 An option is also included, if preferred, to manually categorize transactions that have been categorized into the catch-all category of Expense. If this option is enabled, every time a transaction is categorized into the generic category, the console will prompt the user to type in a valid category before moving onto the next transaction. This gives some control back to the user. At this point, no training is done to the LLM as that is a bit out of my scope.
 
 ## Usage
@@ -120,14 +126,21 @@ To run Ena:
 Below you'll find more details about the flags and options Ena can be ran with.
 
 ##### Directory
-In this repo, you'll find two pre-set directories for which Ena is designed to act upon - `statements` and `output`, which both have first level subdirectories corresponding to individual Financial Institutes. By default, Ena will look at `statements` to glob statements and process, before creating CSV files in `output`.
+In this repo, you'll find two pre-set directories for which Ena defaults to act upon - `statements` and `output`, which both have first level subdirectories corresponding to individual Financial Institutes. By default, Ena will look at `statements` to glob statements and process, before creating CSV files in `output`.
 
 If there are statements under `statements/RBC` then a single CSV will be created in `output/RBC`, containing transactions found in all statements. Thus, it is recommended to run Ena as frequently as possible (with the highest being monthly) to reduce the chance of bugs.
+
+If you wish to change the directory that Ena looks for statements in, you can do so.
 
 ##### Logging
 Ena uses Python's `logging` module to handle outputs to the console, and by default, will set logging level to `WARNING`. However, if verbose mode is enabled via `-v, --verbose`, Ena will log at the `INFO` level for this particular run.
 
 Verbose logging at the `INFO` level is useful during debugging or attempting to add new Financial Institutes. It is not advised to use verbose mode for general usage as it spits out a lot of information that is not needed.
+
+##### Manual Review
+As mentioned above in features, categorization via local LLM inference isn't perfect. Thus, in the case that a user wishes to manually review transactions that the LLM could not categorize due to low confidence, this flag is provided.
+
+If specified via the `-m, --manual-review` flag when running Ena, then for every transaction that has been categorized as the catch-all category of Expense (Category.EXPENSE), the terminal will prompt the user to manually categorize the transaction. For this, the user must type exactly the category they want to categorize this transaction as.
 
 ## Goals and WIP
 The following Financial Insitutes are a WIP as I do not have access to them atm.
@@ -137,6 +150,10 @@ The following Financial Insitutes are a WIP as I do not have access to them atm.
 Another feature I have in mind has to do with recurring expenses, such as Rent, Mortgage, Utilities, etc. In Canada, some of those things are not payable via Credit Card, and thus cannot be tracked by Ena. However, they should be around the same every month, and so, can be included via another option for `Ena.py`. Current approach is to include another file to be looked at by Ena, which include utilities.
 
 As the basis of this fork comes from Teller (noted above), some of the code isn't exactly what I need to for my purposes. Thus, a refactor of the processor code is planned for the future.
+
+While a long shot, it would be interested for me to personally learn how to properly generate and train the LLM to properly categorize transactions based on the data generated via the manual review processing. At this point, this is not within the scope of this project and not something I'm actively working towards.
+
+At this moment, supporting online models like OpenAI, Google, xAI (Grok), etc, is not within the pipelines. It is not within the scope of this project as I do not have access to the APIs of these models, and I do not wish to pay to access those APIs. If you wish to use an online API you have access to, feel free to extract the prompt from `src/llm/Modelfile` and modify `src/llm/api.py` to communicate with the online model of your choice!
 
 ## Contributing
 If you wish to add support for a Financial Insitute of your own choice, feel free to do so! Whether that's by creating a PR or forking is up to you!
