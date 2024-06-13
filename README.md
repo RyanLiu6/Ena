@@ -19,7 +19,9 @@ Ena was built as a tool to better house-keep finances, rather than simply paying
 
 The core feature of Ena is to take Credit Card bill statements from major Financial Institutes in Canada and turning them into CSV files to be used with Google Sheets or Dime (iOS) to better visualize your monthly spendings.
 
-It's currently still a WIP, but hopefully in the soonish future, local LLM can be integrated into Ena to automatically categorize expenses into pre-set categories (defined in `src/model:Category`) so users have a better idea of what they're spending on.
+The second core feature is Ena's ability to query a local custom LLM to categorize transactions into pre-set categories (defined in `src/model:Category`) so users have a better idea of what they're spending on. Currently, the local LLM model is based off Meta's Llama3, and its model is defined at `src/llm/Modelfile`. It has been instructed to only categorize a transaction if its at least 90% confident (0.9). While not perfect, it serves as a nice starting point for most users.
+
+An option is also included, if preferred, to manually categorize transactions that have been categorized into the catch-all category of Expense. If this option is enabled, every time a transaction is categorized into the generic category, the console will prompt the user to type in a valid category before moving onto the next transaction. This gives some control back to the user. At this point, no training is done to the LLM as that is a bit out of my scope.
 
 ## Usage
 Two scripts are provided, the first of which, `Ena.py`, is the one to use to process statement PDFs into CSVs. The second one, `Preferences.py`, is used to configure `preferences.ini` for individual users to determine Ena's overall behaviour.
@@ -68,7 +70,7 @@ This feature is represented by the `csv_order` flag, and there are three options
 `DEFAULT` and `SIMPLE` are quite self-explanatory; `DIME` is the order in which the iOS app expects and prompts the user for the column names, and it's easier to simply click next 4 times in a row withing moving anything around, a real lazy approach to it if you will.
 
 ##### Categories
-By default, Ena will only categorize transactions into two categories - expenses and income. This behaviour can be configured and will be expanded at a later date to integrate a local Ollama instance to use a custom LLM model to categorize transactions. The idea is to prompt an open-sourced model, like Llama3 or Phi3 with all possible categories along with some examples, so that it can categorize expenses to better help visualize their spendings into accurate categories without the user manually having to do so.
+By default, Ena will only categorize transactions into two categories - expenses and income. This behaviour can be configured to instead use a local custom LLM via Ollama to categorize transactions. This will allow Ena to automatically categorize transactions without manual user input.
 
 This feature is represented by the `use_llm` flag, and by default, is set to False (no).
 
@@ -132,9 +134,7 @@ The following Financial Insitutes are a WIP as I do not have access to them atm.
 * BNS
 * TD
 
-Integrating Ollama and LLM in general is a continued WIP as I'm in the process of learning and creating a custom model image that is tuned to the categories I've set.
-
-Another feature I have in mind has to do with reocurring expenses, such as Rent, Mortgage, Utilities, etc. In Canada, some of those things are not payable via Credit Card, and thus cannot be tracked by Ena. However, they should be around the same every month, and so, can be included via another option for `Ena.py`. Current approach is to include another file to be looked at by Ena, which include utilities.
+Another feature I have in mind has to do with recurring expenses, such as Rent, Mortgage, Utilities, etc. In Canada, some of those things are not payable via Credit Card, and thus cannot be tracked by Ena. However, they should be around the same every month, and so, can be included via another option for `Ena.py`. Current approach is to include another file to be looked at by Ena, which include utilities.
 
 As the basis of this fork comes from Teller (noted above), some of the code isn't exactly what I need to for my purposes. Thus, a refactor of the processor code is planned for the future.
 
