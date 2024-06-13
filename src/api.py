@@ -2,18 +2,20 @@ import os
 import re
 import csv
 import logging
-import pdfplumber
 
-from Preferences import ROOT_PATH, get_preferences
+import pdfplumber
 
 from typing import List
 from datetime import datetime
 from collections import defaultdict
+
+from src.llm.api import LLM
+from Preferences import ROOT_PATH, get_preferences
 from src.model import Category, Orders, Transaction, FIFactory, CSV_ORDERS
 
 
 class Ena:
-    def __init__(self, statements_dir: str):
+    def __init__(self, statements_dir: str, manual_review: bool):
         """
         Does two things:
         1. Globs available statements and maps FI Name to corresponding statements'
@@ -24,6 +26,8 @@ class Ena:
         Args:
             statements_dir (str): Directory where statements are stored.
         """
+        self.llm = LLM()
+        self.manual_review = manual_review
         self.preferences = get_preferences()
         self.statements = defaultdict(list)
         for item in os.listdir(statements_dir):
@@ -51,11 +55,13 @@ class Ena:
                 csv_order = CSV_ORDERS[self.preferences.csv_order]
                 writer = csv.DictWriter(csv_file, csv_order)
                 writer.writeheader()
-                for txn in csv_data:
+                for transaction in csv_data:
                     if csv_order == Orders.SIMPLE:
-                        writer.writerow(txn.simple_repr())
+                        writer.writerow(transaction.simple_repr())
                     else:
-                        writer.writerow(txn.row_repr())
+                        writer.writerow(transaction.row_repr())
+
+            print(f"CSV written to {file_path}")
 
     def _parse_statement(self, processor: FIFactory.type_FI, statement_path: str) -> List[Transaction]:
         """
@@ -94,14 +100,14 @@ class Ena:
             opening_balance = processor.get_opening_balance(text)
             closing_balance = processor.get_closing_balance(text)
 
-            print(text)
+            logging.info(text)
 
             # debugging transaction mapping - all 3 regex in transaction have to find a result in order for it to be considered a "match"
             year_end = False
             transaction_regex = processor.get_transaction_regex()
             for match in re.finditer(transaction_regex, text, re.MULTILINE):
                 match_dict = match.groupdict()
-                print(match_dict)
+                logging.info(match_dict)
 
                 date = match_dict["dates"].replace("/", " ") # change format to standard: 03/13 -> 03 13
                 date = date.split(" ")[0:2]  # Aug. 10 Aug. 13 -> ["Aug.", "10"]
@@ -148,7 +154,21 @@ class Ena:
                 else:
                     if self.preferences.use_llm:
                         # Get category via inference
-                        ...
+                        llm_category = self.llm.categorize_transaction(transaction)
+                        if llm_category == Category.EXPENSE and self.manual_review:
+                            # Get human category from input
+                            all_categories = [c.value for c in Category]
+                            print(f"Transaction: [{transaction}] needs a manual review. What category is it?")
+                            print(f"List of possible categories are: {all_categories}")
+                            human_category = input("Please type a new Category (must be exact match):  ").strip()
+
+                            # ensure its one of the options
+                            while human_category not in all_categories:
+                                human_category = input("Input categoy did not match possible categories. Please try again (must be exact match): ")
+
+                            transaction.category = Category[human_category.upper()]
+                        else:
+                            transaction.category = llm_category
                     else:
                         transaction.category = Category.EXPENSE
 

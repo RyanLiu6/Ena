@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 
 import os
-import click
 import logging
+
+import click
 
 from typing import Dict
 from configparser import ConfigParser

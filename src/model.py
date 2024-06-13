@@ -31,19 +31,16 @@ class Preferences:
 
 class Category(Enum):
     RECURRING = "Recurring"
-    GROCERIES = "Groceries"
     HOUSEHOLD = "Household"
     FOOD = "Food"
-    FUN = "Fun"
     FASHION = "Fashion"
     GAMES = "Games"
     TRAVEL = "Travel"
-    GIFTS = "Gifts"
+    # Serves as generic expense
+    EXPENSE = "Expense"
     # Used to differentiate payments / refunds
     # / cashback rewards from expenses
     INCOME = "Income"
-    # Serves as generic expense
-    EXPENSE = "Expense"
 
 
 @dataclass
@@ -56,6 +53,9 @@ class Transaction:
     def __eq__(self, other):
         return isinstance(other, Transaction) and self.date == other.date and self.amount == other.amount \
             and self.note == other.note and self.category == other.category
+
+    def __repr__(self):
+        return f"Date: {self.date} | Amount: {self.amount} | Note: {self.note} | Category: {self.category.value}"
 
     def row_repr(self) -> Dict:
         """
