@@ -5,7 +5,7 @@ import click
 import logging
 
 from src.api import Ena
-from Preferences import ROOT_PATH
+from Preferences import ROOT_PATH, CONFIG_FILE, write_preferences
 
 STATEMENTS_PATH = os.path.join(ROOT_PATH, "statements")
 
@@ -22,6 +22,11 @@ def cli(statements_dir: str, verbose: bool):
     """
     log_level = logging.INFO if verbose else logging.WARNING
     logging.basicConfig(level=log_level)
+
+    try:
+        os.path.isfile(CONFIG_FILE)
+    except FileNotFoundError:
+        write_preferences()
 
     ena = Ena(statements_dir)
     ena.parse_statements()

@@ -146,7 +146,7 @@ class Ena:
                 if processor.is_transaction_income(transaction, self.preferences.positive_expenses):
                     transaction.category = Category.INCOME
                 else:
-                    if self.preferences.use_ollama:
+                    if self.preferences.use_llm:
                         # Get category via inference
                         ...
                     else:

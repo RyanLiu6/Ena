@@ -25,7 +25,7 @@ CSV_ORDERS = {
 @dataclass
 class Preferences:
     csv_order: Orders
-    use_ollama: bool
+    use_llm: bool
     positive_expenses: bool
 
 
