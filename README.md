@@ -5,14 +5,14 @@ Extracts transaction information from Bank Statements for Canadian Financial Ins
 Credits to [Bizzaro](https://github.com/Bizzaro), whose fork of [Teller](https://github.com/Bizzaro/Teller) was my goto tool for a period of time. I found myself wanting to make something similar with some changes to benefit my personal use-case. So, full credits to them, as their Regex code for processing statements was extremely helpful for creating a base to work off of.
 
 ## Table of Contents
-* [Features](##Features)
-* [Usage](##Usage)
-    * [Preferences](###Preferences)
-        * [Options for Preferences](####Options-for-Preferences)
-    * [Ena](###Ena)
-        * [Options for Ena](####Options-for-Ena)
-* [Goals and WIP](##Goals-and-WIP)
-* [Contributing](##Contributing)
+* [Features](##features)
+* [Usage](##usage)
+    * [Preferences](###preferences)
+        * [Options for Preferences](####options-for-preferences)
+    * [Ena](###ena)
+        * [Options for Ena](####options-for-ena)
+* [Goals and WIP](##goals-and-wIP)
+* [Contributing](##contributing)
 
 ## Features
 Ena was built as a tool to better house-keep finances, rather than simply paying Credit Card bills monthly without checking what was paid for. As mentioned above, Ena itself was built because I found myself wanting specific features that weren't available in existing tools without a fee.
