@@ -4,6 +4,16 @@ Extracts transaction information from Bank Statements for Canadian Financial Ins
 ## Credits
 Credits to [Bizzaro](https://github.com/Bizzaro), whose fork of [Teller](https://github.com/Bizzaro/Teller) was my goto tool for a period of time. I found myself wanting to make something similar with some changes to benefit my personal use-case. So, full credits to them, as their Regex code for processing statements was extremely helpful for creating a base to work off of.
 
+## Table of Contents
+* [Features](##Features)
+* [Usage](##Usage)
+    * [Preferences](###Preferences)
+        * [Options for Preferences](####Options-for-Preferences)
+    * [Ena](###Ena)
+        * [Options for Ena](####Options-for-Ena)
+* [Goals and WIP](##Goals-and-WIP)
+* [Contributing](##Contributing)
+
 ## Features
 Ena was built as a tool to better house-keep finances, rather than simply paying Credit Card bills monthly without checking what was paid for. As mentioned above, Ena itself was built because I found myself wanting specific features that weren't available in existing tools without a fee.
 
@@ -41,9 +51,10 @@ To generate one that would use LLM and representing expenses as positive numbers
 ./Preferences.py --csv-order DEFAULT --use-llm --positive-expenses
 ```
 
+#### Options for Preferences
 Below you'll find more details about the options and flags `Preferences.py` can be ran with.
 
-#### CSV Order
+##### CSV Order
 In the output CSV, the order of columns is an important distinction so that users can know exactly what data they're dealing with. Ena can order the columns to best fit your needs.
 
 This feature is represented by the `csv_order` flag, and there are three options to choose from currently, defaulting to `SIMPLE`.
@@ -56,12 +67,12 @@ This feature is represented by the `csv_order` flag, and there are three options
 
 `DEFAULT` and `SIMPLE` are quite self-explanatory; `DIME` is the order in which the iOS app expects and prompts the user for the column names, and it's easier to simply click next 4 times in a row withing moving anything around, a real lazy approach to it if you will.
 
-#### Categories
+##### Categories
 By default, Ena will only categorize transactions into two categories - expenses and income. This behaviour can be configured and will be expanded at a later date to integrate a local Ollama instance to use a custom LLM model to categorize transactions. The idea is to prompt an open-sourced model, like Llama3 or Phi3 with all possible categories along with some examples, so that it can categorize expenses to better help visualize their spendings into accurate categories without the user manually having to do so.
 
 This feature is represented by the `use_llm` flag, and by default, is set to False (no).
 
-#### Expenses as Positive or Negative numbers
+##### Expenses as Positive or Negative numbers
 Depending on what method of madness you approach finances, you may want to represent expenses as negative or positive numbers. This can be helpful if you're expecting the numbers output by Ena to be negative or positive.
 
 Part of the motivation behind this flag was because I often think of expenses as a negative number, well, since it's an expense. But, statements often represent it as a positive number, while payments or refunds are represented as negative numbers.
@@ -103,19 +114,20 @@ To run Ena:
             └── 1718254777.csv
     ```
 
+#### Options for Ena
 Below you'll find more details about the flags and options Ena can be ran with.
 
-#### Directory
+##### Directory
 In this repo, you'll find two pre-set directories for which Ena is designed to act upon - `statements` and `output`, which both have first level subdirectories corresponding to individual Financial Institutes. By default, Ena will look at `statements` to glob statements and process, before creating CSV files in `output`.
 
 If there are statements under `statements/RBC` then a single CSV will be created in `output/RBC`, containing transactions found in all statements. Thus, it is recommended to run Ena as frequently as possible (with the highest being monthly) to reduce the chance of bugs.
 
-#### Logging
+##### Logging
 Ena uses Python's `logging` module to handle outputs to the console, and by default, will set logging level to `WARNING`. However, if verbose mode is enabled via `-v, --verbose`, Ena will log at the `INFO` level for this particular run.
 
 Verbose logging at the `INFO` level is useful during debugging or attempting to add new Financial Institutes. It is not advised to use verbose mode for general usage as it spits out a lot of information that is not needed.
 
-## WIP and Goals
+## Goals and WIP
 The following Financial Insitutes are a WIP as I do not have access to them atm.
 * BNS
 * TD
@@ -126,7 +138,7 @@ Another feature I have in mind has to do with reocurring expenses, such as Rent,
 
 As the basis of this fork comes from Teller (noted above), some of the code isn't exactly what I need to for my purposes. Thus, a refactor of the processor code is planned for the future.
 
-## Contribution
+## Contributing
 If you wish to add support for a Financial Insitute of your own choice, feel free to do so! Whether that's by creating a PR or forking is up to you!
 
 The general process of adding support would:
