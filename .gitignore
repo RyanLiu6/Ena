@@ -162,3 +162,9 @@ cython_debug/
 *.pdf
 *.csv
 preferences.ini
+
+# For uv related files
+.direnv/
+.uv/
+.venv/
+__pypackages__/

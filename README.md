@@ -5,14 +5,24 @@ Converts and categorizes transactions into CSVs for Canadian Financial Instituti
 Credits to [Bizzaro](https://github.com/Bizzaro), whose fork of [Teller](https://github.com/Bizzaro/Teller) was my goto tool for a period of time. I found myself wanting to make something similar with some changes to benefit my personal use-case. So, full credits to them, as their Regex code for processing statements was extremely helpful for creating a base to work off of.
 
 ## Table of Contents
-* [Features](#features)
-* [Usage](#usage)
-    * [Preferences](#preferences)
-        * [Options for Preferences](#options-for-preferences)
-    * [Ena](#ena-1)
-        * [Options for Ena](#options-for-ena)
-* [Goals and WIP](#goals-and-wIP)
-* [Contributing](#contributing)
+- [Ena](#ena)
+  - [Credits](#credits)
+  - [Table of Contents](#table-of-contents)
+  - [Features](#features)
+  - [Usage](#usage)
+    - [Preferences](#preferences)
+      - [Options for Preferences](#options-for-preferences)
+        - [CSV Order](#csv-order)
+        - [Categories](#categories)
+        - [Expenses as Positive or Negative numbers](#expenses-as-positive-or-negative-numbers)
+    - [Ena](#ena-1)
+      - [Options for Ena](#options-for-ena)
+        - [Directory](#directory)
+        - [Logging](#logging)
+        - [Manual Review](#manual-review)
+  - [Goals and WIP](#goals-and-wip)
+  - [Contributing](#contributing)
+  - [Development Setup](#development-setup)
 
 ## Features
 Ena was built as a tool to better house-keep finances, rather than simply paying Credit Card bills monthly without checking what was paid for. As mentioned above, Ena itself was built because I found myself wanting specific features that weren't available in existing tools without a fee.
@@ -122,6 +132,9 @@ To run Ena:
             └── 1718254777.csv
     ```
 
+> [!NOTE]
+> Feel free to redact any PDFs using [https://www.pdfgear.com/](PDFGear) to remove any sensitive information.
+
 #### Options for Ena
 Below you'll find more details about the flags and options Ena can be ran with.
 
@@ -198,3 +211,31 @@ The general process of adding support would:
 6. Update the regex under
 7. Run it again
 8. If no errors and correct CSV is generated, that's it! Otherwise, repeat steps 4 - 7 until it's done.
+
+## Development Setup
+
+1. Install direnv and uv:
+   ```bash
+   # On macOS
+   brew install direnv uv
+
+   # On Linux (Ubuntu/Debian)
+   curl -fsSL https://direnv.net/install.sh | bash
+   curl -LsSf https://github.com/astral-sh/uv/releases/latest/download/uv-installer.sh | sh
+   ```
+
+2. Add direnv hook to your shell:
+   ```bash
+   # Add to your ~/.bashrc or ~/.zshrc
+   eval "$(direnv hook bash)"  # or zsh
+   ```
+
+3. Allow direnv in the project directory:
+   ```bash
+   direnv allow
+   ```
+
+4. Install dependencies using uv:
+   ```bash
+   uv pip install -e .
+   ```
